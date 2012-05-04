@@ -14,7 +14,7 @@ class YamlStatusDumper(ITwitterStatusDumper):
         self.stream = codecs.open(out_fname, mode='wb', encoding="utf-8")        
     
     def dump(self, element):
-        yaml.dump(element, self.stream)
+        yaml.dump(element, self.stream, explicit_start=True)
     
     def flush(self):
         self.stream.flush()
