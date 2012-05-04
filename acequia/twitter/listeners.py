@@ -9,7 +9,7 @@ from tweepy.streaming import StreamListener
 import logging
 
 class TweepyWriterListener(StreamListener):
-    cname = TweepyWriterListener.__module__ + '.TweepyWriterListener'
+    cname = __module__ + '.TweepyWriterListener'
     def __init__(self, api=None, writer=None):
         super(TweepyWriterListener).__init__(api=api)
         self.writer = writer

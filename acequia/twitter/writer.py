@@ -12,7 +12,7 @@ import logging
 from interfaces import IStatusWriter
 
 class BufferedAsyncWriter(IStatusWriter):
-    cname = BufferedAsyncWriter.__module__ + '.BufferedAsyncWriter'
+    cname = __module__ + '.BufferedAsyncWriter'
     def __init__(self, dumper, flush_number=500, wait_time=500):
         self.dumper = dumper        
         self.buffer = deque()        
@@ -25,7 +25,7 @@ class BufferedAsyncWriter(IStatusWriter):
         if not self.stop:
             deque.append(status)
     
-    def write_process(self):
+    def start_process(self):
         out_counter = 0
         self.logger.info("write process started")
         while not self.stop:
@@ -52,5 +52,5 @@ class BufferedAsyncWriter(IStatusWriter):
         self.stop = True        
     
     def __call__(self):
-        self.write_process()
+        self.start_process()
         
