@@ -1,3 +1,4 @@
+__all__=['BufferedWriter']
 '''
 Created on May 4, 2012
 
@@ -8,30 +9,35 @@ from collections import deque
 import time
 import logging
 
-class BufferedWriter(object):
+from interfaces import IStatusWriter
+
+class BufferedAsyncWriter(IStatusWriter):
+    cname = BufferedAsyncWriter.__module__ + '.BufferedAsyncWriter'
     def __init__(self, dumper, flush_number=500, wait_time=500):
         self.dumper = dumper        
         self.buffer = deque()        
         self.stop = False
         self.flush_number = flush_number
         self.wait_time = float(wait_time) / 1000 # sleep needs the parameter in seconds
+        self.logger  = logging.getLogger(self.cname)
                 
     def push_status(self, status):
-        deque.append(status)
+        if not self.stop:
+            deque.append(status)
     
     def write_process(self):
         out_counter = 0
-        logging.info("write process started")
+        self.logger.info("write process started")
         while not self.stop:
             if len(self.buffer) > 0: 
                 element = self.buffer.popleft()
                 self.dumper.dump(element)
                 out_counter += 1
                 if out_counter > self.flush_number:
-                    logging.info("written {count} status elements".format(count=out_counter))
+                    self.logger.info("written {count} status elements".format(count=out_counter))
                     self.dumper.flush()                            
             else:
-                logging.info("no data in the buffer, sleeping for {}ms".format(self.wait_time))
+                self.logger.info("no data in the buffer, sleeping for {}ms".format(self.wait_time))
                 time.sleep(self.wait_time)
         
         logging.info("writting last {} statuses".format(len(self.buffer)))
@@ -39,7 +45,12 @@ class BufferedWriter(object):
             self.dumper.dump(elem)
                                     
         self.dumper.close()
-        logging.info("write process ended")
+        self.logger.info("write process ended")        
+    
+    def stop_process(self):
+        self.logger.info("stopping writing process: no more status are being accepted")
+        self.stop = True        
     
     def __call__(self):
-        self.write_process()    
+        self.write_process()
+        
