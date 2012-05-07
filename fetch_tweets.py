@@ -96,7 +96,7 @@ def main():
     
     try:
         while True:   
-            time.sleep(10000000000) # Wait 'indefinitely' but capture the ctrl-c            
+            time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
     except KeyboardInterrupt:
         writer.stop_process()
         logging.info("disconnecting from twitter stream")
