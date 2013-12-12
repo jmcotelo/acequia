@@ -9,7 +9,7 @@ from collections import deque
 import time
 import logging
 
-from interfaces import IStatusWriter
+from .interfaces import IStatusWriter
 
 class BufferedAsyncWriter(IStatusWriter):
     cname = __name__ + '.BufferedAsyncWriter'

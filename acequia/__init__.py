@@ -1,1 +1,2 @@
-import twitter
+__all__ = ["twitter"]
+from . import twitter

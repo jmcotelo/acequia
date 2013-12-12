@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 Created on May 4, 2012
@@ -10,17 +10,14 @@ import time
 import argparse
 import yaml
 
-import tweepy
-from tweepy.streaming import Stream
+#import tweepy
+#from tweepy.streaming import Stream
 
 from acequia.twitter.writer import BufferedAsyncWriter
-from acequia.twitter.dumpers import YamlStatusDumper
-from acequia.twitter.listeners import TweepyWriterListener,TweepyDummyListener
+#from acequia.twitter.dumpers import *
+#from acequia.twitter.listeners import *
 
 from threading import Thread
-
-#users = ['@movistar_es', '@somosyoigo', '@vodafone_es', '@orange_es', '@simyo_es', '@jazztel_es', '@pepephone','@tuenti_movil']
-#terms = ['vodafone', 'yoigo', 'simyo', 'pepephone', 'tuenti_movil', 'jazztel', 'orange', 'movistar']
 
 def configure_logging():    
     # log to file including debug
