@@ -58,57 +58,58 @@ def parse_auth_file(auth_fname):
 
 def main(args):
     # create the credentials via OAuth (see Devs section in Twitter)
-    auth = authenticate_tweepy(**parse_auth_file(args.authfile))
+    print(parse_auth_file(args.authfile))
+    #auth = authenticate_tweepy(**parse_auth_file(args.authfile))
     
-    #auth = basic_authentication(args.user, args.password)
-    api = tweepy.API(auth)
+    # #auth = basic_authentication(args.user, args.password)
+    # api = tweepy.API(auth)
     
-    # create the dumper and the writer    
-    dumper = YamlStatusDumper(args.output)
-    writer = BufferedAsyncWriter(dumper)
+    # # create the dumper and the writer    
+    # dumper = YamlStatusDumper(args.output)
+    # writer = BufferedAsyncWriter(dumper)
     
-    # create a background thread for doing the writter dirty work
-    th = Thread(target=writer, name='BackgroundWriter')
+    # # create a background thread for doing the writter dirty work
+    # th = Thread(target=writer, name='BackgroundWriter')
     
-    # hook a closing response printing routine (before instancing)
-    def on_closed_hook(self, resp):
-        logging.warn("Closed stream from twitter, performing reconnection")
+    # # hook a closing response printing routine (before instancing)
+    # def on_closed_hook(self, resp):
+    #     logging.warn("Closed stream from twitter, performing reconnection")
 
-    Stream.on_closed = on_closed_hook        
+    # Stream.on_closed = on_closed_hook        
     
-    # create the listener and the stream object
-    listener = TweepyWriterListener(writer=writer, lang_filter=args.lang)
-    stream = Stream(auth, listener)
+    # # create the listener and the stream object
+    # listener = TweepyWriterListener(writer=writer, lang_filter=args.lang)
+    # stream = Stream(auth, listener)
     
-    users = args.follow
-    terms = args.terms
+    # users = args.follow
+    # terms = args.terms
     
-    # compose the track param
-    track_terms = list(terms)
-    track_terms.extend(users)
+    # # compose the track param
+    # track_terms = list(terms)
+    # track_terms.extend(users)
     
-    # generate the follow-ids
-    logging.info("acquiring valid userids from twitter for {} users".format(len(users)))
-    follow_ids = []
-    for usr_name in users:
-        try:
-            follow_ids.append(api.get_user(usr_name).id)
-        except tweepy.TweepError:
-            logging.warn('User {} not found in Twitter'.format(usr_name))
+    # # generate the follow-ids
+    # logging.info("acquiring valid userids from twitter for {} users".format(len(users)))
+    # follow_ids = []
+    # for usr_name in users:
+    #     try:
+    #         follow_ids.append(api.get_user(usr_name).id)
+    #     except tweepy.TweepError:
+    #         logging.warn('User {} not found in Twitter'.format(usr_name))
            
-    # start the whole thing in separate threads    
-    th.start()
-    logging.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
-    stream.filter(follow=follow_ids, track=track_terms, async=True)
+    # # start the whole thing in separate threads    
+    # th.start()
+    # logging.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
+    # stream.filter(follow=follow_ids, track=track_terms, async=True)
     
     try:
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
     except KeyboardInterrupt:
-        writer.stop_process()
+        #writer.stop_process()
         logging.info("disconnecting from twitter stream")
-        stream.disconnect()
-        th.join()
+        #stream.disconnect()
+        #th.join()
     
     logging.info("Have a nice day!")            
 
