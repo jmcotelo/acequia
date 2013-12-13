@@ -7,7 +7,7 @@ Created on May 4, 2012
 
 import yaml
 import codecs
-from interfaces import ITwitterStatusDumper 
+from .interfaces import ITwitterStatusDumper 
 
 class YamlStatusDumper(ITwitterStatusDumper):
     def __init__(self, out_fname):        
