@@ -26,13 +26,16 @@ class TwythonDummyStreamListener(TwythonStreamer):
 			if valid:
 				tweet = "@{author}: {text}".format(author=status_data['user']['screen_name'], text=status_data['text'])
 				self.logger.debug(tweet)
-				print(tweet)
 
 	def on_error(self, status_code, data):
 		self.logger.error("problems while streaming, error code {}:{}".format(status_code, data))		
 		
-	#def on_limit(self, track):
-	#    self.logger.warn("limitiation notice from twitter: {}".format(track))
+	def on_limit(self, data):
+	    self.logger.warn("limitiation notice from twitter: {}".format(data['track']))
+
+	def on_disconnect(self, data):
+		stream_name, code, reason = data['stream_name'], data['code'], data['reason']
+		logging.warn("Disconnected stream {} from twitter: {} - {}".format(stream_name, code, reason))
 		
 	def on_timeout(self):
 		self.logger.warn("twitter connection timed out")
