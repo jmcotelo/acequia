@@ -6,6 +6,8 @@ Created on Dec 13, 2012
 from twython import TwythonStreamer
 import logging
 
+from guess_language import guess_language, UNKNOWN
+
 class TwythonDummyStreamListener(TwythonStreamer):
 	cname = __name__ + '.TwythonDummyStreamListener'
 	def __init__(self, app_key, app_secret, oauth_token, oauth_token_secret, lang_filter=None, **kwargs):
@@ -18,14 +20,14 @@ class TwythonDummyStreamListener(TwythonStreamer):
 		if 'text' in status_data:
 			valid = True
 			if self.lang_filter:
-				inferred_lang = guessLanguage(status_data['text'])
-				valid = True if (inferred_lang == self.lang_filter or inferred_lang == UNKNOWN) else False	
+				inferred_lang = guess_language(status_data['text'])
+				valid = True if (inferred_lang == self.lang_filter or inferred_lang == UNKNOWN) else False				
 			
 			if valid:
 				tweet = "@{author}: {text}".format(author=status_data['user']['screen_name'], text=status_data['text'])
 				self.logger.debug(tweet)
 				print(tweet)
-			
+
 	def on_error(self, status_code, data):
 		self.logger.error("problems while streaming, error code {}:{}".format(status_code, data))		
 		
