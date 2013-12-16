@@ -10,10 +10,7 @@ import time
 import argparse
 import yaml
 
-from twython import Twython
-from twython.exceptions import TwythonError
-
-from acequia.twitter.listeners import TwythonDummyStreamListener
+from acequia.twitter import TwitterStreamingFetcher
 #from acequia.twitter.writer import BufferedAsyncWriter
 #from acequia.twitter.dumpers import *
 #from acequia.twitter.listeners import *
@@ -47,41 +44,10 @@ def main(args):
     auth_data = parse_auth_file(args.authfile)
     lang_filter = args.lang
 
-    # Get the individual values
-    consumer_key = auth_data['consumer']['key']
-    consumer_secret = auth_data['consumer']['secret']
-    oauth_token = auth_data['oauth']['token']
-    oauth_token_secret = auth_data['oauth']['token_secret']
-
-    # instance the Twitter API wrapper
-    twitter = Twython(consumer_key, consumer_secret, oauth_token, oauth_token_secret)
-
     # Get the tracking params
     users = args.follow
-    terms = args.terms
-
-    # compose the track param
-    track_terms = list(terms)
-    track_terms.extend(users)
-
-    # generate the follow-ids
-    logging.info("acquiring valid userids from twitter for {} users".format(len(users)))
-    screen_names = [user[1:] for user in users]
-    try:
-        user_objects = twitter.lookup_user(screen_name=','.join(screen_names))
-    except TwythonError:
-        logging.warn("No valid users found for streaming follow")
-        user_objects = []
-
-    follow_ids = [user_obj['id'] for user_obj in user_objects]
-    
-    # create the stream listener
-    logging.info("instancing stream listener (lang_filter={})".format(lang_filter))
-    streamer = TwythonDummyStreamListener(consumer_key, consumer_secret, oauth_token, oauth_token_secret, lang_filter)
-
-    # start the stream listener
-    logging.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
-            
+    terms = args.terms            
+                
     # # create a background thread for doing the writter dirty work
     # th = Thread(target=writer, name='BackgroundWriter')
     
@@ -91,13 +57,17 @@ def main(args):
     # stream.filter(follow=follow_ids, track=track_terms, async=True)
     
     try:
-        streamer.statuses.filter(track=track_terms, follow=follow_ids)
+        # start the fetcher
+        fetcher = TwitterStreamingFetcher(auth_data)
+        fetcher.fetch(users, terms, lang_filter)
+
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
+    
     except KeyboardInterrupt:
         #writer.stop_process()
         logging.info("disconnecting from twitter stream")
-        streamer.disconnect()
+        fetcher.stop()
         #th.join()
     
     logging.info("Have a nice day!")            
