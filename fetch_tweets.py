@@ -10,8 +10,6 @@ import time
 import argparse
 import yaml
 
-#import tweepy
-#from tweepy.streaming import Stream
 from twython import Twython
 from twython.exceptions import TwythonError
 
