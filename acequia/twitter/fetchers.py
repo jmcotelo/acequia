@@ -22,9 +22,7 @@ class TwitterStreamingFetcher():
 	def __init__(self, auth_data):
 		# update the auth data
 		self._update_auth_data(auth_data)
-		# instance the Twitter API wrapper
-		self.twitter_api = Twython(self.consumer_key, self.consumer_secret, 
-								   self.oauth_token,  self.oauth_token_secret)
+
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)
 
@@ -37,27 +35,10 @@ class TwitterStreamingFetcher():
 		self.oauth_token = auth_data['oauth']['token']
 		self.oauth_token_secret = auth_data['oauth']['token_secret']
 
-	def _get_follow_ids(self, users):     	
-	# generate the follow-ids    
-		if len(users) > 0: 
-			self.logger.info("acquiring valid userids from twitter for {} users".format(len(users)))
-			screen_names = [user[1:] for user in users]
-			try:
-				user_objects = self.twitter_api.lookup_user(screen_name=','.join(screen_names))
-			except TwythonError:
-				self.logger.warn("No valid users found for streaming follow")
-				user_objects = []
-
-			return [user_obj['id'] for user_obj in user_objects]
-
-		return []
-
 	def fetch(self, terms, users, lang_filter=None):
-		# get the user ids to follows    	
-		follow_ids = self._get_follow_ids(users)
 
-		self.stream_sp = StreamSubprocess(terms, users, follow_ids, lang_filter, self.consumer_key, 
-											self.consumer_secret, self.oauth_token, self.oauth_token_secret)
+		self.stream_sp = StreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
+											self.oauth_token, self.oauth_token_secret)
 		stream_spw = SubProcessWrapper(self.stream_sp)
 		self.stream_kill_event = stream_spw.get_kill_event()
 		self.stream_proc = Process(target=stream_spw, name = stream_spw.name)
@@ -75,34 +56,53 @@ class StreamSubprocess(ISubProcess):
 	cname = __name__ + '.StreamSubprocess'
 	name = 'StreamSubprocess'
 	
-	def __init__(self, terms, users, follow_ids, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret):
+	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret):
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)	
 		
 		# store some data
 		self.terms = terms		
 		self.users = users
-		self.follow_ids = follow_ids
-		
-		#instance the stream listener
+
+		# instance the Twitter API wrapper
+		self.twitter_api = Twython(consumer_key, consumer_secret, 
+								   oauth_token,  oauth_token_secret)
+
+		# instance the stream listener
 		self.logger.info("instancing stream listener (lang_filter={})".format(lang_filter))
 		self.streamer = TwythonDummyStreamListener(consumer_key, consumer_secret, 
 												 	oauth_token, oauth_token_secret, 
-													lang_filter)	
+													lang_filter)
 
+	def _get_follow_ids(self, users):  	
+	# generate the follow-ids    
+		if len(users) > 0: 
+			self.logger.info("acquiring valid userids from twitter for {} users".format(len(users)))
+			screen_names = [user[1:] for user in users]
+			try:
+				user_objects = self.twitter_api.lookup_user(screen_name=','.join(screen_names))
+			except TwythonError:
+				self.logger.warn("No valid users found for streaming follow")
+				user_objects = []
+
+			return [user_obj['id'] for user_obj in user_objects]
+
+		return []
+	
 	def run(self):
+		# get the user ids to follows    	
+		follow_ids = self._get_follow_ids(self.users)
+
 		# compose the track param
 		self.track_terms = list(self.terms)
 		self.track_terms.extend(self.users)	
 
-		if len(self.follow_ids) > 0:
-			self.logger.info("starting twitter streaming fitering with {} terms".format(len(self.terms)))
-			self.logger.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(self.terms), len(self.users), len(self.follow_ids)))
-		else:
-			self.follow_ids = None
+		self.logger.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(self.terms), len(self.users), len(follow_ids)))
+		if len(follow_ids) == 0:			
+			follow_ids = None
 
-		# start the retrieving process
-		self.streamer.statuses.filter(track=self.track_terms, follow=self.follow_ids)
+		# start the retrieving process		
+		self.streamer.statuses.filter(track=self.track_terms, follow=follow_ids)
 
 	def stop(self):
 		self.streamer.disconnect()
