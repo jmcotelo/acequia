@@ -6,10 +6,10 @@ Created on Dec 16, 2012
 import logging
 from twython import Twython, TwythonError
 
-from .listeners import TwythonDummyStreamListener
+from .listeners import TwythonQueuePusherStreamListener
 from .interfaces import ISubProcess
 
-from multiprocessing import Process, Event
+from multiprocessing import Process, Event, SimpleQueue, Queue
 from threading import Thread
 
 import signal
@@ -36,9 +36,9 @@ class TwitterStreamingFetcher():
 		self.oauth_token_secret = auth_data['oauth']['token_secret']
 
 	def fetch(self, terms, users, lang_filter=None):
-
+		self.shared_queue = Queue()		
 		self.stream_sp = StreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
-											self.oauth_token, self.oauth_token_secret)
+											self.oauth_token, self.oauth_token_secret, self.shared_queue)
 		stream_spw = SubProcessWrapper(self.stream_sp)
 		self.stream_kill_event = stream_spw.get_kill_event()
 		self.stream_proc = Process(target=stream_spw, name = stream_spw.name)
@@ -48,15 +48,24 @@ class TwitterStreamingFetcher():
 		self.logger.info("Fetching process started")		
 
 	def stop(self):		
-		if self.running:
+		if self.running:			
 			self.stream_kill_event.set()
+			# queue cleanup
+			try:
+				while True:
+					data = self.shared_queue.get_nowait()						
+					#print(data)
+			except:
+				pass
+			
 			self.stream_proc.join()
+
 
 class StreamSubprocess(ISubProcess):
 	cname = __name__ + '.StreamSubprocess'
 	name = 'StreamSubprocess'
 	
-	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret):
+	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret, queue):
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)	
 		
@@ -70,9 +79,9 @@ class StreamSubprocess(ISubProcess):
 
 		# instance the stream listener
 		self.logger.info("instancing stream listener (lang_filter={})".format(lang_filter))
-		self.streamer = TwythonDummyStreamListener(consumer_key, consumer_secret, 
-												 	oauth_token, oauth_token_secret, 
-													lang_filter)
+		self.streamer = TwythonQueuePusherStreamListener(consumer_key, consumer_secret, 
+												 		oauth_token, oauth_token_secret, 
+														queue, lang_filter)
 
 	def _get_follow_ids(self, users):  	
 	# generate the follow-ids    
@@ -101,7 +110,8 @@ class StreamSubprocess(ISubProcess):
 		if len(follow_ids) == 0:			
 			follow_ids = None
 
-		# start the retrieving process		
+		# start the retrieving process
+		self.streamer.get_queue().cancel_join_thread()		
 		self.streamer.statuses.filter(track=self.track_terms, follow=follow_ids)
 
 	def stop(self):
@@ -124,8 +134,7 @@ class SubProcessWrapper:
 		signal.signal(signal.SIGINT, signal.SIG_IGN)
 		self.kill_event.wait()
 		self.logger.info("stopping SubProcessTask: {}".format(self.name))
-		self.target.stop()
-		th.join()
+		self.target.stop()		
 
 	def __call__(self):
 		self.run()
