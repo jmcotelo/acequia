@@ -20,7 +20,7 @@ from threading import Thread
 def configure_logging():    
     # log to file including debug
     logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s;%(threadName)s;%(name)s;%(levelname)s;%(message)s',
+                    format='%(asctime)s;%(processName)s;%(name)s;%(levelname)s;%(message)s',
                     #datefmt='%m-%d %H:%M',
                     filename='fetch_tweets.log',
                     filemode='w')    
@@ -28,7 +28,7 @@ def configure_logging():
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     # set a format which is simpler for console use
-    formatter = logging.Formatter('%(asctime)s [%(threadName)s|%(name)s] %(levelname)s: %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(processName)s|%(name)s] %(levelname)s: %(message)s')
     # tell the handler to use this format
     console.setFormatter(formatter)
     # add the handler to the root logger
@@ -59,14 +59,14 @@ def main(args):
     try:
         # start the fetcher
         fetcher = TwitterStreamingFetcher(auth_data)
-        fetcher.fetch(users, terms, lang_filter)
+        fetcher.fetch(terms, users, lang_filter)        
 
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
     
-    except KeyboardInterrupt:
+    except KeyboardInterrupt:        
         #writer.stop_process()
-        logging.info("disconnecting from twitter stream")
+        logging.info("stopping fetching process")
         fetcher.stop()
         #th.join()
     

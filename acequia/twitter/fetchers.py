@@ -7,6 +7,14 @@ import logging
 from twython import Twython, TwythonError
 
 from .listeners import TwythonDummyStreamListener
+from .interfaces import ISubProcess
+
+from multiprocessing import Process, Event
+from threading import Thread
+
+import signal
+
+import time
 
 class TwitterStreamingFetcher():
 	cname = __name__ + '.TwitterStreamingFetcher'
@@ -45,30 +53,82 @@ class TwitterStreamingFetcher():
 		return []
 
 	def fetch(self, terms, users, lang_filter=None):
-		# compose the track param
-		track_terms = list(terms)
-		track_terms.extend(users)
-		
 		# get the user ids to follows    	
 		follow_ids = self._get_follow_ids(users)
 
-		# create the stream listener
-		self.logger.info("instancing stream listener (lang_filter={})".format(lang_filter))
-		self.streamer = TwythonDummyStreamListener(self.consumer_key, self.consumer_secret, 
-												 	self.oauth_token, self.oauth_token_secret, 
-													lang_filter)
+		self.stream_sp = StreamSubprocess(terms, users, follow_ids, lang_filter, self.consumer_key, 
+											self.consumer_secret, self.oauth_token, self.oauth_token_secret)
+		stream_spw = SubProcessWrapper(self.stream_sp)
+		self.stream_kill_event = stream_spw.get_kill_event()
+		self.stream_proc = Process(target=stream_spw, name = stream_spw.name)
+		self.stream_proc.start()	
+		self.running = True
+		
+		self.logger.info("Fetching process started")		
 
-		if len(follow_ids) > 0:
-			self.logger.info("starting twitter streaming fitering with {} terms".format(len(terms)))
-			self.logger.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
+	def stop(self):		
+		if self.running:
+			self.stream_kill_event.set()
+			self.stream_proc.join()
+
+class StreamSubprocess(ISubProcess):
+	cname = __name__ + '.StreamSubprocess'
+	name = 'StreamSubprocess'
+	
+	def __init__(self, terms, users, follow_ids, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret):
+		# instance the logger
+		self.logger = logging.getLogger(self.cname)	
+		
+		# store some data
+		self.terms = terms		
+		self.users = users
+		self.follow_ids = follow_ids
+		
+		#instance the stream listener
+		self.logger.info("instancing stream listener (lang_filter={})".format(lang_filter))
+		self.streamer = TwythonDummyStreamListener(consumer_key, consumer_secret, 
+												 	oauth_token, oauth_token_secret, 
+													lang_filter)	
+
+	def run(self):
+		# compose the track param
+		self.track_terms = list(self.terms)
+		self.track_terms.extend(self.users)	
+
+		if len(self.follow_ids) > 0:
+			self.logger.info("starting twitter streaming fitering with {} terms".format(len(self.terms)))
+			self.logger.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(self.terms), len(self.users), len(self.follow_ids)))
 		else:
-			follow_ids = None
+			self.follow_ids = None
 
 		# start the retrieving process
-		self.streamer.statuses.filter(track=track_terms, follow=follow_ids)
-
-		self.running = True
+		self.streamer.statuses.filter(track=self.track_terms, follow=self.follow_ids)
 
 	def stop(self):
-		if self.running:
-			self.streamer.disconnect()
+		self.streamer.disconnect()
+
+
+class SubProcessWrapper:
+	cname = __name__ + '.SubProcessWrapper'
+	def __init__(self, target, name=None):
+		self.target = target
+		self.running = False
+		self.name = name if name else target.name
+		self.kill_event = Event()
+		self.logger = logging.getLogger(self.cname)
+
+	def run(self):
+		self.logger.info("starting SubProcessTask: {}".format(self.name))
+		th = Thread(target=self.target, name=self.target.name)
+		th.start()		
+		signal.signal(signal.SIGINT, signal.SIG_IGN)
+		self.kill_event.wait()
+		self.logger.info("stopping SubProcessTask: {}".format(self.name))
+		self.target.stop()
+		th.join()
+
+	def __call__(self):
+		self.run()
+
+	def get_kill_event(self):
+		return self.kill_event

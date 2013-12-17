@@ -17,3 +17,13 @@ class ITwitterStatusDumper(object):
     
     def close(self):
         pass
+
+class ISubProcess:
+	def run(self):
+		pass
+
+	def stop(self):
+		pass
+
+	def __call__(self):
+		self.run()
