@@ -9,6 +9,7 @@ import logging
 import time
 import argparse
 import yaml
+import os
 
 from acequia.twitter import TwitterStreamingFetcher
 
@@ -33,11 +34,33 @@ def parse_auth_file(auth_fname):
     with open(auth_fname) as stream:
         return yaml.load(stream)
 
+def check_and_create_output_directory(base_dir, subdirs=['statuses', 'graphs', 'terms']):
+    os.makedirs(base_dir, exist_ok=True)
+    for subdir in subdirs:
+        os.makedirs('{}/{}'.format(base_dir, subdir), exist_ok=True)
+
 def main(args):
     # Parse auth file
     logging.info("parsing authentication data from {}".format(args.authfile))
     auth_data = parse_auth_file(args.authfile)
+    
+    # Get the lang filter
     lang_filter = args.lang
+
+    # Get the output directory
+    output_dir = args.output_dir
+    if not os.path.exists(output_dir):
+        logging.info("output directory '{}' does not exists. Creating it.".format(output_dir))
+        check_and_create_output_directory(output_dir)
+    elif os.path.isdir(output_dir):
+        # check/create subdirs
+        check_and_create_output_directory(output_dir)
+    else:
+        logging.error("output path '{}' already exists and is not a directory. Aborting".format(output_dir))
+        exit()
+
+
+    logging.info("setting '{}' as output directory.".format(output_dir))
 
     # Get the tracking params
     users = args.follow
@@ -45,7 +68,7 @@ def main(args):
     
     try:
         # start the fetcher
-        fetcher = TwitterStreamingFetcher(auth_data)
+        fetcher = TwitterStreamingFetcher(auth_data, output_dir)
         fetcher.fetch(terms, users, lang_filter)        
 
         while True:   
@@ -59,10 +82,10 @@ def main(args):
 
 def configure_argparse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o','--output', 
-                        help='file where all the captured data goes (default=out.yaml)',
+    parser.add_argument('-o','--output-dir', 
+                        help='file where all the captured data goes (default=fetched_data)',
                         type=str,
-                        default='out.yaml')
+                        default='output_data')
     
     parser.add_argument('-l','--lang', 
                         help='lang of the captured tweets (default=es)')
