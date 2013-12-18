@@ -9,6 +9,8 @@ from twython import Twython, TwythonError
 from .listeners import TwythonQueuePusherStreamListener
 from .interfaces import ISubProcess
 from .subprocess import SubProcessWrapper
+from .writer import BufferedAsyncWriter, PullBufferedWriter
+from .dumpers import DummyStatusDumper
 
 from multiprocessing import Process, SimpleQueue, Queue
 
@@ -38,36 +40,39 @@ class TwitterStreamingFetcher():
 		stream_spw = SubProcessWrapper(self.stream_sp)
 		self.stream_kill_event = stream_spw.get_kill_event()
 		self.stream_proc = Process(target=stream_spw, name = stream_spw.name)
-		self.stream_proc.start()	
+		self.stream_proc.start()
+		
+		self.writer_sp = PullBufferedWriter(DummyStatusDumper(), self.shared_queue)
+		writer_spw = SubProcessWrapper(self.writer_sp, name="WriterProcess")
+		self.writer_kill_event = writer_spw.get_kill_event()
+		self.writer_proc = Process(target=writer_spw, name = writer_spw.name)
+		self.writer_proc.start()
+
 		self.running = True
 		
 		self.logger.info("Fetching process started")		
 
 	def stop(self):		
-		if self.running:			
-			self.stream_kill_event.set()
-			# queue cleanup
-			try:
-				while True:
-					data = self.shared_queue.get_nowait()						
-					#print(data)
-			except:
-				pass
+		if self.running:
+			self.stream_kill_event.set()				
+			self.writer_kill_event.set()
+			self.writer_proc.join()
+			self.stream_proc.join()			
 			
-			self.stream_proc.join()
 
 
 class StreamSubprocess(ISubProcess):
 	cname = __name__ + '.StreamSubprocess'
-	name = 'StreamSubprocess'
+	name = 'StreamingProcess'
 	
-	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret, queue):
+	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret, shared_queue):
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)	
 		
 		# store some data
 		self.terms = terms		
 		self.users = users
+		self.shared_queue = shared_queue
 
 		# instance the Twitter API wrapper
 		self.twitter_api = Twython(consumer_key, consumer_secret, 
@@ -77,7 +82,10 @@ class StreamSubprocess(ISubProcess):
 		self.logger.info("instancing stream listener (lang_filter={})".format(lang_filter))
 		self.streamer = TwythonQueuePusherStreamListener(consumer_key, consumer_secret, 
 												 		oauth_token, oauth_token_secret, 
-														queue, lang_filter)
+														shared_queue, lang_filter)
+
+	def task_name(self):
+		return self.name
 
 	def _get_follow_ids(self, users):  	
 	# generate the follow-ids    
@@ -106,9 +114,9 @@ class StreamSubprocess(ISubProcess):
 		if len(follow_ids) == 0:			
 			follow_ids = None
 
-		# start the retrieving process
-		self.streamer.get_queue().cancel_join_thread()		
+		# start the retrieving process		
 		self.streamer.statuses.filter(track=self.track_terms, follow=follow_ids)
 
 	def stop(self):
 		self.streamer.disconnect()
+		self.shared_queue.close()
