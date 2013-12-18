@@ -4,3 +4,4 @@ from . import writer
 from . import interfaces
 from . import dumpers
 from .fetchers import TwitterStreamingFetcher
+from . import subprocess
