@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''
 Created on May 4, 2012
@@ -9,23 +9,14 @@ import logging
 import time
 import argparse
 import yaml
+import os
 
-import tweepy
-from tweepy.streaming import Stream
-
-from acequia.twitter.writer import BufferedAsyncWriter
-from acequia.twitter.dumpers import YamlStatusDumper
-from acequia.twitter.listeners import TweepyWriterListener,TweepyDummyListener
-
-from threading import Thread
-
-#users = ['@movistar_es', '@somosyoigo', '@vodafone_es', '@orange_es', '@simyo_es', '@jazztel_es', '@pepephone','@tuenti_movil']
-#terms = ['vodafone', 'yoigo', 'simyo', 'pepephone', 'tuenti_movil', 'jazztel', 'orange', 'movistar']
+from acequia.twitter import TwitterStreamingFetcher
 
 def configure_logging():    
     # log to file including debug
     logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s;%(threadName)s;%(name)s;%(levelname)s;%(message)s',
+                    format='%(asctime)s;%(processName)s;%(name)s;%(levelname)s;%(message)s',
                     #datefmt='%m-%d %H:%M',
                     filename='fetch_tweets.log',
                     filemode='w')    
@@ -33,94 +24,71 @@ def configure_logging():
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     # set a format which is simpler for console use
-    formatter = logging.Formatter('%(asctime)s [%(threadName)s|%(name)s] %(levelname)s: %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(processName)s|%(name)s] %(levelname)s: %(message)s')
     # tell the handler to use this format
     console.setFormatter(formatter)
     # add the handler to the root logger
     logging.getLogger('').addHandler(console)
 
- 
-def authenticate_tweepy(consumer_key, consumer_secret, access_token, access_token_secret):
-    # == OAuth Authentication ==
-    #
-    # This mode of authentication is the new preferred way
-    # of authenticating with Twitter.
-
-    # The consumer keys can be found on your application's Details
-    # page located at https://dev.twitter.com/apps (under "OAuth settings")
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-    return auth
-
-def basic_authentication(user, pwd):
-    tweepy.BasicAuthHandler(user,pwd)
-
 def parse_auth_file(auth_fname):
     with open(auth_fname) as stream:
         return yaml.load(stream)
 
-def main(args):
-    # create the credentials via OAuth (see Devs section in Twitter)
-    auth = authenticate_tweepy(**parse_auth_file(args.authfile))
-    
-    #auth = basic_authentication(args.user, args.password)
-    api = tweepy.API(auth)
-    
-    # create the dumper and the writer    
-    dumper = YamlStatusDumper(args.output)
-    writer = BufferedAsyncWriter(dumper)
-    
-    # create a background thread for doing the writter dirty work
-    th = Thread(target=writer, name='BackgroundWriter')
-    
-    # hook a closing response printing routine (before instancing)
-    def on_closed_hook(self, resp):
-        logging.warn("Closed stream from twitter, performing reconnection")
+def check_and_create_output_directory(base_dir, subdirs=['statuses', 'graphs', 'terms']):
+    os.makedirs(base_dir, exist_ok=True)
+    subdir_paths = ['{}/{}'.format(base_dir, subdir) for subdir in subdirs]
+    for path in subdir_paths:
+        os.makedirs(path, exist_ok=True)
+    return subdir_paths
 
-    Stream.on_closed = on_closed_hook        
+def main(args):    
+    # Parse auth file
+    logging.info("parsing authentication data from {}".format(args.authfile))
+    auth_data = parse_auth_file(args.authfile)
     
-    # create the listener and the stream object
-    listener = TweepyWriterListener(writer=writer, lang_filter=args.lang)
-    stream = Stream(auth, listener)
-    
+    # Get the lang filter
+    lang_filter = args.lang
+
+    # Get the output directory
+    output_dir = args.output_dir
+    subdir_paths = None
+    if not os.path.exists(output_dir):        
+        logging.info("output directory '{}' does not exists. Creating it.".format(output_dir))
+        subdir_paths = check_and_create_output_directory(output_dir)
+    elif os.path.isdir(output_dir):
+        # check/create subdirs
+        subdir_paths = check_and_create_output_directory(output_dir)
+    else:
+        logging.error("output path '{}' already exists and is not a directory. Aborting".format(output_dir))
+        exit()
+
+
+    logging.info("setting '{}' as output directory.".format(output_dir))
+
+    # Get the tracking params
     users = args.follow
-    terms = args.terms
-    
-    # compose the track param
-    track_terms = list(terms)
-    track_terms.extend(users)
-    
-    # generate the follow-ids
-    logging.info("acquiring valid userids from twitter for {} users".format(len(users)))
-    follow_ids = []
-    for usr_name in users:
-        try:
-            follow_ids.append(api.get_user(usr_name).id)
-        except tweepy.TweepError:
-            logging.warn('User {} not found in Twitter'.format(usr_name))
-           
-    # start the whole thing in separate threads    
-    th.start()
-    logging.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
-    stream.filter(follow=follow_ids, track=track_terms, async=True)
+    terms = args.terms            
     
     try:
+        # start the fetcher
+        fetcher = TwitterStreamingFetcher(auth_data, *subdir_paths)
+        fetcher.fetch(terms, users, lang_filter)        
+
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
-    except KeyboardInterrupt:
-        writer.stop_process()
-        logging.info("disconnecting from twitter stream")
-        stream.disconnect()
-        th.join()
+    
+    except KeyboardInterrupt:                
+        logging.info("stopping fetching process")
+        fetcher.stop()        
     
     logging.info("Have a nice day!")            
 
 def configure_argparse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o','--output', 
-                        help='file where all the captured data goes (default=out.yaml)',
+    parser.add_argument('-o','--output-dir', 
+                        help='file where all the captured data goes (default=fetched_data)',
                         type=str,
-                        default='out.yaml')
+                        default='output_data')
     
     parser.add_argument('-l','--lang', 
                         help='lang of the captured tweets (default=es)')
