@@ -36,10 +36,12 @@ def parse_auth_file(auth_fname):
 
 def check_and_create_output_directory(base_dir, subdirs=['statuses', 'graphs', 'terms']):
     os.makedirs(base_dir, exist_ok=True)
-    for subdir in subdirs:
-        os.makedirs('{}/{}'.format(base_dir, subdir), exist_ok=True)
+    subdir_paths = ['{}/{}'.format(base_dir, subdir) for subdir in subdirs]
+    for path in subdir_paths:
+        os.makedirs(path, exist_ok=True)
+    return subdir_paths
 
-def main(args):
+def main(args):    
     # Parse auth file
     logging.info("parsing authentication data from {}".format(args.authfile))
     auth_data = parse_auth_file(args.authfile)
@@ -49,12 +51,13 @@ def main(args):
 
     # Get the output directory
     output_dir = args.output_dir
-    if not os.path.exists(output_dir):
+    subdir_paths = None
+    if not os.path.exists(output_dir):        
         logging.info("output directory '{}' does not exists. Creating it.".format(output_dir))
-        check_and_create_output_directory(output_dir)
+        subdir_paths = check_and_create_output_directory(output_dir)
     elif os.path.isdir(output_dir):
         # check/create subdirs
-        check_and_create_output_directory(output_dir)
+        subdir_paths = check_and_create_output_directory(output_dir)
     else:
         logging.error("output path '{}' already exists and is not a directory. Aborting".format(output_dir))
         exit()
@@ -68,7 +71,7 @@ def main(args):
     
     try:
         # start the fetcher
-        fetcher = TwitterStreamingFetcher(auth_data, output_dir)
+        fetcher = TwitterStreamingFetcher(auth_data, *subdir_paths)
         fetcher.fetch(terms, users, lang_filter)        
 
         while True:   

@@ -4,20 +4,26 @@ Created on Dec 16, 2012
 @author: jcm
 '''
 import logging
+import datetime
 from twython import Twython, TwythonError
 
 from .listeners import TwythonQueuePusherStreamListener
 from .interfaces import ISubProcess
 from .subprocess import SubProcessWrapper
 from .writer import BufferedAsyncWriter, PullBufferedWriter
-from .dumpers import DummyStatusDumper
+from .dumpers import DummyStatusDumper, YamlStatusDumper
 
 from multiprocessing import Process, SimpleQueue, Queue
 
 class TwitterStreamingFetcher():
 	cname = __name__ + '.TwitterStreamingFetcher'
 	
-	def __init__(self, auth_data):
+	def __init__(self, auth_data, statuses_dir, graphs_dir, termlists_dir):
+		# store the target dir for holding data
+		self.statuses_dir = statuses_dir
+		self.graphs_dir = graphs_dir
+		self.terms_dir = termlists_dir
+		
 		# update the auth data
 		self._update_auth_data(auth_data)
 
@@ -39,7 +45,10 @@ class TwitterStreamingFetcher():
 		return self._create_subprocess_wrapper(stream_sp, 'StreamingProcess')
 		
 	def _create_writer_subprocess(self):
-		writer_sp = PullBufferedWriter(DummyStatusDumper(), self.shared_queue)
+		t_now = datetime.datetime.now()
+		timestamp = t_now.strftime("%Y-%m-%d_%H-%M-%S")
+		fpath = '{}/statuses{}.yaml'.format(self.statuses_dir, timestamp)
+		writer_sp = PullBufferedWriter(YamlStatusDumper(fpath), self.shared_queue)
 		return self._create_subprocess_wrapper(writer_sp, 'WritingProcess')
 		
 	def _create_subprocess_wrapper(self, sp, spw_name=None):
