@@ -51,11 +51,9 @@ def main(args):
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
     
-    except KeyboardInterrupt:        
-        #writer.stop_process()
+    except KeyboardInterrupt:                
         logging.info("stopping fetching process")
-        fetcher.stop()
-        #th.join()
+        fetcher.stop()        
     
     logging.info("Have a nice day!")            
 
