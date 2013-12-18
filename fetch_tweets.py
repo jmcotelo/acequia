@@ -11,11 +11,6 @@ import argparse
 import yaml
 
 from acequia.twitter import TwitterStreamingFetcher
-#from acequia.twitter.writer import BufferedAsyncWriter
-#from acequia.twitter.dumpers import *
-#from acequia.twitter.listeners import *
-
-from threading import Thread
 
 def configure_logging():    
     # log to file including debug
@@ -47,14 +42,6 @@ def main(args):
     # Get the tracking params
     users = args.follow
     terms = args.terms            
-                
-    # # create a background thread for doing the writter dirty work
-    # th = Thread(target=writer, name='BackgroundWriter')
-    
-    # # start the whole thing in separate threads    
-    # th.start()
-    # logging.info("starting twitter streaming fitering with {} terms, {} users and following {} userids".format(len(terms), len(users), len(follow_ids)))
-    # stream.filter(follow=follow_ids, track=track_terms, async=True)
     
     try:
         # start the fetcher

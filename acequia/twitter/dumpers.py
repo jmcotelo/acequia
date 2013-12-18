@@ -1,4 +1,4 @@
-__all__=['YamlStatusDumper']
+__all__=['YamlStatusDumper', 'DummyStatusDumper']
 '''
 Created on May 4, 2012
 
@@ -23,4 +23,5 @@ class YamlStatusDumper(ITwitterStatusDumper):
 
 class DummyStatusDumper(ITwitterStatusDumper):
 	def dump(self, element):
-		print(element)
+		tweet = "@{author}: {text}".format(author=element['user']['screen_name'], text=element['text'])
+		print(tweet)
