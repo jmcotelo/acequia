@@ -44,11 +44,12 @@ class TwitterStreamingFetcher():
 									 		self.oauth_token, self.oauth_token_secret, self.shared_queue)
 		return self._create_subprocess_wrapper(stream_sp, 'StreamingProcess')
 		
-	def _create_writer_subprocess(self):
-		t_now = datetime.datetime.now()
+	def _create_writer_subprocess(self, terms, users):		
+		t_now = datetime.datetime.now()		
 		timestamp = t_now.strftime("%Y-%m-%d_%H-%M-%S")
 		fpath = '{}/statuses{}.yaml'.format(self.statuses_dir, timestamp)
-		writer_sp = PullBufferedWriter(YamlStatusDumper(fpath), self.shared_queue)
+		header = {'terms': terms, 'users': users}
+		writer_sp = PullBufferedWriter(YamlStatusDumper(fpath, header), self.shared_queue)
 		return self._create_subprocess_wrapper(writer_sp, 'WritingProcess')
 		
 	def _create_subprocess_wrapper(self, sp, spw_name=None):
@@ -63,7 +64,7 @@ class TwitterStreamingFetcher():
 		
 		# spawn the subprocesses
 		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users, lang_filter)
-		self.writer_proc, self.writer_kill_event = self._create_writer_subprocess()
+		self.writer_proc, self.writer_kill_event = self._create_writer_subprocess(terms, users)
 		
 		# start both subprocesses
 		self.stream_proc.start()
