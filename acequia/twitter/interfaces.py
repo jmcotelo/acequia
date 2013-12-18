@@ -5,7 +5,7 @@ Created on May 4, 2012
 '''
 
 class IStatusWriter(object):
-    def push_status(self, status):
+    def push_status(self, status_data):
         pass
     
 class ITwitterStatusDumper(object):
