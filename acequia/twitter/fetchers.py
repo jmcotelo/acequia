@@ -33,19 +33,29 @@ class TwitterStreamingFetcher():
 		self.oauth_token = auth_data['oauth']['token']
 		self.oauth_token_secret = auth_data['oauth']['token_secret']
 
-	def fetch(self, terms, users, lang_filter=None):
-		self.shared_queue = Queue()		
-		self.stream_sp = StreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
-											self.oauth_token, self.oauth_token_secret, self.shared_queue)
-		stream_spw = SubProcessWrapper(self.stream_sp)
-		self.stream_kill_event = stream_spw.get_kill_event()
-		self.stream_proc = Process(target=stream_spw, name = stream_spw.name)
-		self.stream_proc.start()
+
+	def _crate_stream_subprocess(self, terms, users, lang_filter):
+		stream_sp = TwythonStreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
+									 		self.oauth_token, self.oauth_token_secret, self.shared_queue)
+		return self._create_subprocess_wrapper(stream_sp, 'StreamingProcess')
 		
-		self.writer_sp = PullBufferedWriter(DummyStatusDumper(), self.shared_queue)
-		writer_spw = SubProcessWrapper(self.writer_sp, name="WriterProcess")
-		self.writer_kill_event = writer_spw.get_kill_event()
-		self.writer_proc = Process(target=writer_spw, name = writer_spw.name)
+	def _create_writer_subprocess(self):
+		writer_sp = PullBufferedWriter(DummyStatusDumper(), self.shared_queue)
+		return self._create_subprocess_wrapper(writer_sp, 'WritingProcess')
+		
+	def _create_subprocess_wrapper(self, sp, spw_name=None):
+		spw = SubProcessWrapper(sp, spw_name)
+		kill_event = spw.get_kill_event()
+		p = Process(target=spw, name = spw.name)
+		return(p, kill_event)
+
+	def fetch(self, terms, users, lang_filter=None):
+		# create the common queue
+		self.shared_queue = Queue()
+		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users, lang_filter)
+		self.writer_proc, self.writer_kill_event = self._create_writer_subprocess()
+		
+		self.stream_proc.start()
 		self.writer_proc.start()
 
 		self.running = True
@@ -61,9 +71,9 @@ class TwitterStreamingFetcher():
 			
 
 
-class StreamSubprocess(ISubProcess):
-	cname = __name__ + '.StreamSubprocess'
-	name = 'StreamingProcess'
+class TwythonStreamSubprocess(ISubProcess):
+	cname = __name__ + '.TwythonStreamSubprocess'
+	name = 'TwythonStreamingProcess'
 	
 	def __init__(self, terms, users, lang_filter, consumer_key, consumer_secret, oauth_token, oauth_token_secret, shared_queue):
 		# instance the logger
