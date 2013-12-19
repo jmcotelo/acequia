@@ -1,2 +1,2 @@
 __all__=["status"]
-from . import status
+from .status import StatusDataParser
