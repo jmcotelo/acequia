@@ -31,8 +31,8 @@ class StatusDataParser:
 		entities = data['entities']
 		
 		# get hashtags and mentions
-		hashtags = [h['text'] for h in entities['hashtags']]
-		user_mentions = [m['screen_name'] for m in entities['user_mentions']]
+		hashtags = ['#{}'.format(h['text']) for h in entities['hashtags']]
+		user_mentions = ['@{}'.format(m['screen_name']) for m in entities['user_mentions']]
 		if len(hashtags) == 0: hashtags = None
 		if len(user_mentions) == 0: user_mentions = None
 
