@@ -61,3 +61,13 @@ class GraphBuilder:
 				builder(g, item)
 		# return the graph
 		return g
+
+class GraphAnalyzer:
+	@classmethod
+	def get_relevance_ranking(cls, graph, relevance_measure=_nx.pagerank_scipy):		
+		if graph:
+			# get the relevance values
+			relevance = relevance_measure(graph)
+			# sort the relevance items for its relevance value. Descending order
+			ranking = sorted(relevance.items(), key=lambda x:x[1], reverse=True)
+			return ranking
