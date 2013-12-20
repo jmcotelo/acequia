@@ -3,7 +3,8 @@ Created on Dec 19, 2012
 
 @author: jcm
 '''
-import networkx as nx
+import networkx as _nx
+import itertools as _itertools
 
 class GraphBuilder:
 	# the default building strategy supposes that the item comes in a DefaultDataStucture
@@ -14,18 +15,28 @@ class GraphBuilder:
 		author_id = '@{}'.format(item.author_name)
 
 		if item.hashtags:
+			# User -> Hashtag edges
 			for tag_id in item.hashtags:
-				arc = (author_id, tag_id)
-				if arc not in g.edges():
-					g.add_edge(*arc, weight=0)
-				g[author_id][tag_id]['weight'] +=1
+				cls._update_graph_with_edge(g, author_id, tag_id)
+
+			# Hashtag <-> Hashtag edges
+			for t1, t2 in _itertools.combinations(item.hashtags, r=2):
+				cls._update_graph_with_edge(g, t1, t2)
+				cls._update_graph_with_edge(g, t2, t1)
 
 		if item.user_mentions:
+			# User -> User edges
 			for user_id in item.user_mentions:
-				arc = (author_id, user_id)
-				if arc not in g.edges():
-					g.add_edge(*arc, weight=0)
-				g[author_id][user_id]['weight'] +=1
+				cls._update_graph_with_edge(g, author_id, user_id)
+
+	# helper method to avoid copy/paste repetition
+	@classmethod
+	def _update_graph_with_edge(cls, g, from_id, to_id):
+		arc = (from_id, to_id)
+		if arc not in g.edges():
+			g.add_edge(*arc, weight=0)
+		g[from_id][to_id]['weight'] +=1
+
 
 	# the selection default behaviour is quite straightforward: select items that
 	# uses any term coming from the seed set
@@ -43,7 +54,7 @@ class GraphBuilder:
 		builder = build_func if build_func else cls._builder_strategy
 		selector = selector_functor if selector_functor else cls._selector_strategy
 		# graph instancing
-		g = nx.DiGraph()
+		g = _nx.DiGraph()
 		# data stream processing
 		for item in data:
 			if selector(g, item, seed_set):
