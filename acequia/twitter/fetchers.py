@@ -18,11 +18,9 @@ from multiprocessing import Process, SimpleQueue, Queue
 class TwitterStreamingFetcher():
 	cname = __name__ + '.TwitterStreamingFetcher'
 	
-	def __init__(self, auth_data, statuses_dir, graphs_dir, termlists_dir):
+	def __init__(self, auth_data, statuses_dir, lang_filter=None):
 		# store the target dir for holding data
 		self.statuses_dir = statuses_dir
-		self.graphs_dir = graphs_dir
-		self.terms_dir = termlists_dir
 		
 		# update the auth data
 		self._update_auth_data(auth_data)
@@ -30,8 +28,11 @@ class TwitterStreamingFetcher():
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)
 
+		# lang filter
+		self.lang_filter = lang_filter
+
 		# internal state
-		self.running = False
+		self.running = False		
 
 	def _update_auth_data(self, auth_data):
 		self.consumer_key = auth_data['consumer']['key']
@@ -58,7 +59,7 @@ class TwitterStreamingFetcher():
 		p = Process(target=spw, name = spw.name)
 		return(p, kill_event)
 
-	def fetch(self, terms, users, lang_filter=None):
+	def start(self, terms, users):
 		# create the shared queue
 		self.shared_queue = Queue()
 		
