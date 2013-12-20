@@ -18,11 +18,9 @@ from multiprocessing import Process, SimpleQueue, Queue
 class TwitterStreamingFetcher():
 	cname = __name__ + '.TwitterStreamingFetcher'
 	
-	def __init__(self, auth_data, statuses_dir, graphs_dir, termlists_dir):
+	def __init__(self, auth_data, statuses_dir, lang_filter=None):
 		# store the target dir for holding data
 		self.statuses_dir = statuses_dir
-		self.graphs_dir = graphs_dir
-		self.terms_dir = termlists_dir
 		
 		# update the auth data
 		self._update_auth_data(auth_data)
@@ -30,8 +28,11 @@ class TwitterStreamingFetcher():
 		# instance the logger
 		self.logger = logging.getLogger(self.cname)
 
+		# lang filter
+		self.lang_filter = lang_filter
+
 		# internal state
-		self.running = False
+		self.running = False		
 
 	def _update_auth_data(self, auth_data):
 		self.consumer_key = auth_data['consumer']['key']
@@ -39,8 +40,8 @@ class TwitterStreamingFetcher():
 		self.oauth_token = auth_data['oauth']['token']
 		self.oauth_token_secret = auth_data['oauth']['token_secret']
 
-	def _crate_stream_subprocess(self, terms, users, lang_filter):
-		stream_sp = TwythonStreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
+	def _crate_stream_subprocess(self, terms, users):
+		stream_sp = TwythonStreamSubprocess(terms, users, self.lang_filter, self.consumer_key,	self.consumer_secret, 
 									 		self.oauth_token, self.oauth_token_secret, self.shared_queue)
 		return self._create_subprocess_wrapper(stream_sp, 'StreamingProcess')
 		
@@ -58,12 +59,12 @@ class TwitterStreamingFetcher():
 		p = Process(target=spw, name = spw.name)
 		return(p, kill_event)
 
-	def fetch(self, terms, users, lang_filter=None):
+	def start(self, terms, users):
 		# create the shared queue
 		self.shared_queue = Queue()
 		
 		# spawn the subprocesses
-		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users, lang_filter)
+		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users)
 		self.writer_proc, self.writer_kill_event = self._create_writer_subprocess(terms, users)
 		
 		# start both subprocesses

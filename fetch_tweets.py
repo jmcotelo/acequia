@@ -11,7 +11,7 @@ import argparse
 import yaml
 import os
 
-from acequia.twitter import TwitterStreamingFetcher
+from acequia.twitter import TwitterAdaptiveRetriever
 
 def configure_logging():    
     # log to file including debug
@@ -35,10 +35,12 @@ def parse_auth_file(auth_fname):
         return yaml.load(stream)
 
 def check_and_create_output_directory(base_dir, subdirs=['statuses', 'graphs', 'terms']):
-    os.makedirs(base_dir, exist_ok=True)
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)    
     subdir_paths = ['{}/{}'.format(base_dir, subdir) for subdir in subdirs]
     for path in subdir_paths:
-        os.makedirs(path, exist_ok=True)
+        if not os.path.exists(path):
+            os.makedirs(path)        
     return subdir_paths
 
 def main(args):    
@@ -71,15 +73,17 @@ def main(args):
     
     try:
         # start the fetcher
-        fetcher = TwitterStreamingFetcher(auth_data, *subdir_paths)
-        fetcher.fetch(terms, users, lang_filter)        
+        #fetcher = TwitterStreamingFetcher(auth_data, *subdir_paths)
+        #fetcher.fetch(terms, users, lang_filter)
+        retriever = TwitterAdaptiveRetriever(auth_data, *subdir_paths)
+        retriever.start(terms, users, lang_filter)
 
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
     
     except KeyboardInterrupt:                
-        logging.info("stopping fetching process")
-        fetcher.stop()        
+        logging.info("stopping retrieval process")
+        retriever.stop()        
     
     logging.info("Have a nice day!")            
 
