@@ -49,13 +49,13 @@ class GraphBuilder:
 
 
 	@classmethod
-	def build_graph(cls, data, seed_set, build_func=None, selector_functor=None):
+	def build_graph(cls, data, seed_set, build_func=None, selector_functor=None):		
 		# default behaviour 
 		builder = build_func if build_func else cls._builder_strategy
 		selector = selector_functor if selector_functor else cls._selector_strategy
 		# graph instancing
 		g = _nx.DiGraph()
-		# data stream processing
+		# data stream processing		
 		for item in data:
 			if selector(g, item, seed_set):
 				builder(g, item)
@@ -76,4 +76,4 @@ class GraphDumper:
 	@classmethod
 	def dump_graph(cls, graph, fpath):
 		if graph:
-			_nx.write_gexf(g, fpath)
+			_nx.write_gexf(graph, fpath)

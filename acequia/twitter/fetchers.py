@@ -40,8 +40,8 @@ class TwitterStreamingFetcher():
 		self.oauth_token = auth_data['oauth']['token']
 		self.oauth_token_secret = auth_data['oauth']['token_secret']
 
-	def _crate_stream_subprocess(self, terms, users, lang_filter):
-		stream_sp = TwythonStreamSubprocess(terms, users, lang_filter, self.consumer_key,	self.consumer_secret, 
+	def _crate_stream_subprocess(self, terms, users):
+		stream_sp = TwythonStreamSubprocess(terms, users, self.lang_filter, self.consumer_key,	self.consumer_secret, 
 									 		self.oauth_token, self.oauth_token_secret, self.shared_queue)
 		return self._create_subprocess_wrapper(stream_sp, 'StreamingProcess')
 		
@@ -64,7 +64,7 @@ class TwitterStreamingFetcher():
 		self.shared_queue = Queue()
 		
 		# spawn the subprocesses
-		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users, lang_filter)
+		self.stream_proc, self.stream_kill_event = self._crate_stream_subprocess(terms, users)
 		self.writer_proc, self.writer_kill_event = self._create_writer_subprocess(terms, users)
 		
 		# start both subprocesses

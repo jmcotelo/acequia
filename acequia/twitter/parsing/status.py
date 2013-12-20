@@ -60,9 +60,6 @@ class StatusDataParser:
 			statuses = yaml.load_all(fd, Loader=Loader)			
 			statuses.__next__()
 			for status_data in statuses:
-				parsed_data = proc_func(status_data)
-				yield parsed_data
-
-
-		
-
+				if 'text' in status_data:
+					parsed_data = proc_func(status_data)
+					yield parsed_data

@@ -10,12 +10,13 @@ try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
+
 from .interfaces import ITwitterStatusDumper 
 
 class YamlStatusDumper(ITwitterStatusDumper):
     def __init__(self, out_fname, header):        
         self.stream = open(out_fname, mode='wt', encoding="utf-8")
-        self.dump(header, Dumper=Dumper)
+        self.dump(header)
     
     def dump(self, element):
         yaml.dump(element, self.stream, Dumper=Dumper, explicit_start=True)
