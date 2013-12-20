@@ -6,15 +6,19 @@ Created on May 4, 2012
 '''
 
 import yaml
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
 from .interfaces import ITwitterStatusDumper 
 
 class YamlStatusDumper(ITwitterStatusDumper):
     def __init__(self, out_fname, header):        
         self.stream = open(out_fname, mode='wt', encoding="utf-8")
-        self.dump(header)
+        self.dump(header, Dumper=Dumper)
     
     def dump(self, element):
-        yaml.dump(element, self.stream, explicit_start=True)
+        yaml.dump(element, self.stream, Dumper=Dumper, explicit_start=True)
     
     def flush(self):
         self.stream.flush()
