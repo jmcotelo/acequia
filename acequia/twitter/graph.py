@@ -71,3 +71,9 @@ class GraphAnalyzer:
 			# sort the relevance items for its relevance value. Descending order
 			ranking = sorted(relevance.items(), key=lambda x:x[1], reverse=True)
 			return ranking
+
+class GraphDumper:
+	@classmethod
+	def dump_graph(cls, graph, fpath):
+		if graph:
+			_nx.write_gexf(g, fpath)
