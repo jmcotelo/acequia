@@ -64,7 +64,6 @@ def main(args):
         logging.error("output path '{}' already exists and is not a directory. Aborting".format(output_dir))
         exit()
 
-
     logging.info("setting '{}' as output directory.".format(output_dir))
 
     # Get the tracking params
@@ -72,11 +71,8 @@ def main(args):
     terms = args.terms            
     
     try:
-        # start the fetcher
-        #fetcher = TwitterStreamingFetcher(auth_data, *subdir_paths)
-        #fetcher.fetch(terms, users, lang_filter)
-        retriever = TwitterAdaptiveRetriever(auth_data, *subdir_paths)
-        retriever.start(terms, users, lang_filter)
+        retriever = TwitterAdaptiveRetriever(auth_data, *subdir_paths, lang_filter=lang_filter)
+        retriever.start(set(terms), users)
 
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
