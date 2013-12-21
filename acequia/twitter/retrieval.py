@@ -43,9 +43,9 @@ class TwitterAdaptiveRetriever:
 
 		def thread_running(seed_set, an_window, max_terms, period):
 			t_prev = time.time()
-			while self.running:								
+			while self.running:
 				elapsed_time = time.time() - t_prev
-				if elapsed_time >= 3600:
+				if elapsed_time >= period:
 					self.logger("starting new iteration")
 					self._iteration(seed_set, an_window, max_terms)
 					t_prev = time.time()

@@ -72,7 +72,7 @@ def main(args):
     
     try:
         retriever = TwitterAdaptiveRetriever(auth_data, *subdir_paths, lang_filter=lang_filter)
-        retriever.start(set(terms), users)
+        retriever.start(set(terms), users, args.period, args.window, args.max_terms)
 
         while True:   
             time.sleep(86400) # Wait 'indefinitely' but capture the ctrl-c            
@@ -86,7 +86,7 @@ def main(args):
 def configure_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o','--output-dir', 
-                        help='file where all the captured data goes (default=fetched_data)',
+                        help='file where all the captured data goes (default=output_data)',
                         type=str,
                         default='output_data')
     
@@ -94,13 +94,28 @@ def configure_argparse():
                         help='lang of the captured tweets (default=es)')
                         
     parser.add_argument('terms', 
-                        help='terms to be tracked',
+                        help='seed terms to be tracked',
                         nargs='+')
                                                 
     parser.add_argument('-f','--follow', 
                         help='users to be followed',
                         nargs='*',
                         default=[])
+
+    parser.add_argument('-p','--period',
+                        help='iteration period for adaptive retrieval in secs (default=3600)',
+                        type=int,
+                        default=3600)
+
+    parser.add_argument('-w','--window',
+                        help='quantity of past iterations used for adaptive analysis (default=12)',
+                        type=int,
+                        default=12)
+
+    parser.add_argument('-t','--max_terms',
+                        help='maximum number of terms, including seed terms, used for term list generation (default=15)',
+                        type=int,
+                        default=15)
                         
     auth_group = parser.add_argument_group('auth')
     parser.add_argument('-af','--authfile', 
