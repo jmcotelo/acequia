@@ -31,7 +31,7 @@ class TwythonDummyStreamListener(TwythonStreamer):
 		self.logger.error("problems while streaming, error code {}:{}".format(status_code, data))		
 		
 	def on_limit(self, data):
-	    self.logger.warn("limitiation notice from twitter: {}".format(data['track']))
+		self.logger.warn("limitiation notice from twitter: {}".format(data['track']))
 
 	def on_disconnect(self, data):
 		stream_name, code, reason = data['stream_name'], data['code'], data['reason']
@@ -59,14 +59,14 @@ class TwythonQueuePusherStreamListener(TwythonStreamer):
 				inferred_lang = guess_language(status_data['text'])
 				valid = True if (inferred_lang == self.lang_filter or inferred_lang == UNKNOWN) else False				
 			
-			if valid:				
+			if valid:
 				self.queue.put(status_data, False)
 
 	def on_error(self, status_code, data):
 		self.logger.error("problems while streaming, error code {}:{}".format(status_code, data))		
 		
 	def on_limit(self, data):
-	    self.logger.warn("limitiation notice from twitter: {}".format(data['track']))
+		self.logger.warn("limitiation notice from twitter: {}".format(data['track']))
 
 	def on_disconnect(self, data):
 		stream_name, code, reason = data['stream_name'], data['code'], data['reason']
