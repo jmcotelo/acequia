@@ -59,8 +59,7 @@ class TwythonQueuePusherStreamListener(TwythonStreamer):
 				inferred_lang = guess_language(status_data['text'])
 				valid = True if (inferred_lang == self.lang_filter or inferred_lang == UNKNOWN) else False				
 			
-			if valid:
-				tweet = "@{author}: {text}".format(author=status_data['user']['screen_name'], text=status_data['text'])
+			if valid:				
 				self.queue.put(status_data, False)
 
 	def on_error(self, status_code, data):
