@@ -41,13 +41,13 @@ class TwitterAdaptiveRetriever:
 		self.logger.info("Adatptive retrieval process started (p={}, w={}, max_t={})".format(period, an_window, max_terms))
 		self.running = True
 
-		def thread_running(seed_set, an_window, max_terms, period):
+		def thread_running(retriever, seed_set, an_window, max_terms, period):
 			t_prev = time.time()
 			while self.running:
 				elapsed_time = time.time() - t_prev
 				if elapsed_time >= period:
-					self.logger("starting new iteration")
-					self._iteration(seed_set, an_window, max_terms)
+					logging.info("starting new iteration")
+					retriever._iteration(seed_set, an_window, max_terms)
 					t_prev = time.time()
 				time.sleep(1.0)			
 
@@ -55,7 +55,7 @@ class TwitterAdaptiveRetriever:
 			#perform an additional last analysis stage
 			self._anlysis_stage(seed_set, an_window)
 
-		self.background_thread = Thread(target=thread_running, args=(seed_set, an_window, max_terms, period))
+		self.background_thread = Thread(target=thread_running, args=(self, seed_set, an_window, max_terms, period))
 		self.background_thread.start()
 
 	def stop(self):
@@ -67,7 +67,7 @@ class TwitterAdaptiveRetriever:
 	# private helper methods
 	def _iteration(self, seed_set, an_window, max_terms):
 		# stop fetching process
-		self.fetcher.start()		
+		self.fetcher.stop()		
 		
 		# perform the analysis stage
 		ranking = self._anlysis_stage(seed_set, an_window)
@@ -76,7 +76,7 @@ class TwitterAdaptiveRetriever:
 		term_set, users = self._get_next_termset(seed_set, ranking, max_terms)
 
 		# start a new fetching process
-		self.fetcher.fetch(term_set, users, lang_filter)		
+		self.fetcher.start(term_set, users)		
 	
 	def _anlysis_stage(self, seed_set, an_window):
 		# parse data from the last n status files in the an_window
@@ -100,17 +100,21 @@ class TwitterAdaptiveRetriever:
 
 	def _get_next_termset(self, seed_set, ranking, max_terms):
 		# get the most 'max_terms' relevant terms from the ranking, preserving the seed terms
-		new_terms = [term for term, value in ranking if term not in seed_set][:max_terms - len(seed_set)]		
+		new_terms = [term for term, value in ranking if term not in seed_set][:max_terms - len(seed_set)]
 		term_set = set(seed_set)
 		term_set.update(new_terms)
+		print("ranking={}".format(ranking))
+		print("seed_set={}".format(seed_set))
+		print("term_set={}".format(term_set))
+		print("new_terms={}".format(new_terms))
 		
 		# dump the terms 
 		t_now = datetime.datetime.now()		
 		timestamp = t_now.strftime("%Y-%m-%d_%H-%M-%S")
 		fpath = "{}/terms{}.txt".format(self.terms_dir, timestamp)
 		with open(fpath, 'wt', encoding='utf-8') as fd:
-			fd.writelines('{}\n'.format(term) for term in terms)
+			fd.writelines('{}\n'.format(term) for term in term_set)
 		
 		# get users separately
-		users = [t for t in terms if t.startswith('@')]
+		users = [t for t in term_set if t.startswith('@')]
 		return term_set, users
