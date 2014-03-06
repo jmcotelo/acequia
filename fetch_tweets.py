@@ -13,12 +13,12 @@ import os
 
 from acequia.twitter import TwitterAdaptiveRetriever
 
-def configure_logging():    
+def configure_logging(logfname):
     # log to file including debug
     logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s;%(processName)s;%(name)s;%(levelname)s;%(message)s',
                     #datefmt='%m-%d %H:%M',
-                    filename='fetch_tweets.log',
+                    filename=logfname,
                     filemode='w')    
     # define a Handler which writes INFO messages or higher to the sys.stderr
     console = logging.StreamHandler()
@@ -116,6 +116,11 @@ def configure_argparse():
                         help='maximum number of terms, including seed terms, used for term list generation (default=15)',
                         type=int,
                         default=15)
+
+    parser.add_argument('-lf','--logfile',
+                        help='name of the logfile (default=fetch_tweets.log)',
+                        type=str,
+                        default='fetch_tweets.log')
                         
     auth_group = parser.add_argument_group('auth')
     parser.add_argument('-af','--authfile', 
@@ -127,5 +132,6 @@ def configure_argparse():
 
 if __name__ == "__main__":
     parser = configure_argparse()
-    configure_logging()
-    main(parser.parse_args())
+    args = parser.parse_args()
+    configure_logging(args.logfile)
+    main(args)

@@ -103,10 +103,10 @@ class TwitterAdaptiveRetriever:
 		new_terms = [term for term, value in ranking if term not in seed_set][:max_terms - len(seed_set)]
 		term_set = set(seed_set)
 		term_set.update(new_terms)
-		print("ranking={}".format(ranking))
-		print("seed_set={}".format(seed_set))
-		print("term_set={}".format(term_set))
-		print("new_terms={}".format(new_terms))
+		self.logger.debug("ranking={}".format(ranking))
+		self.logger.debug("seed_set={}".format(seed_set))
+		self.logger.debug("term_set={}".format(term_set))
+		self.logger.debug("new_terms={}".format(new_terms))
 		
 		# dump the terms 
 		t_now = datetime.datetime.now()		

@@ -25,20 +25,20 @@ class StatusDataParser:
 	@classmethod
 	def _default_strategy(cls, data):
 		# get author screen_name
-		author_name = data['user']['screen_name']
+		author_name = data['user']['screen_name'].lower()
 		
 		# get the entities
 		entities = data['entities']
 		
 		# get hashtags and mentions
-		hashtags = ['#{}'.format(h['text']) for h in entities['hashtags']]
-		user_mentions = ['@{}'.format(m['screen_name']) for m in entities['user_mentions']]
+		hashtags = ['#{}'.format(h['text'].lower()) for h in entities['hashtags']]
+		user_mentions = ['@{}'.format(m['screen_name'].lower()) for m in entities['user_mentions']]
 		if len(hashtags) == 0: hashtags = None
 		if len(user_mentions) == 0: user_mentions = None
 
 		# get the terms of the text
-		status_text = data['text']
-		status_text = URLMatcher.sub(' ',status_text.lower()) # remove URLs
+		status_text = data['text'].lower()
+		status_text = URLMatcher.sub(' ',status_text) # remove URLs
 		term_set = set(TermMatcher.findall(status_text))
 
 		return cls.DefaultDataStructure(author_name, hashtags, user_mentions, term_set)

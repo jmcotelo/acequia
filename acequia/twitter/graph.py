@@ -10,19 +10,22 @@ class GraphBuilder:
 	# the default building strategy supposes that the item comes in a DefaultDataStucture
 	# object used by _default_strategy extraction process defined in parsing.status
 	@classmethod
-	def _builder_strategy(cls, g, item):
+	def _builder_strategy(cls, g, item, seed_set):
 		# Nodes are create explictily when an edge is added to the graph
 		author_id = '@{}'.format(item.author_name)
 
-		if item.hashtags:
-			# User -> Hashtag edges
-			for tag_id in item.hashtags:
-				cls._update_graph_with_edge(g, author_id, tag_id)
+		# generate the valid terms for graph constructions
+		graph_terms = item.term_set & seed_set
+		if item.hashtags: graph_terms.union(item.hashtags)
+		
+		# User -> Term edges
+		for term_id in graph_terms:
+			cls._update_graph_with_edge(g, author_id, term_id)
 
-			# Hashtag <-> Hashtag edges
-			for t1, t2 in _itertools.combinations(item.hashtags, r=2):
-				cls._update_graph_with_edge(g, t1, t2)
-				cls._update_graph_with_edge(g, t2, t1)
+		# Term <-> Term edges
+		for t1, t2 in _itertools.combinations(graph_terms, r=2):
+			cls._update_graph_with_edge(g, t1, t2)
+			cls._update_graph_with_edge(g, t2, t1)
 
 		if item.user_mentions:
 			# User -> User edges
@@ -33,10 +36,10 @@ class GraphBuilder:
 	@classmethod
 	def _update_graph_with_edge(cls, g, from_id, to_id):
 		arc = (from_id, to_id)
-		if arc not in g.edges():
-			g.add_edge(*arc, weight=0)
-		g[from_id][to_id]['weight'] +=1
-
+		if not g.has_edge(*arc):
+			g.add_edge(*arc, weight=1)
+		else:
+			g[from_id][to_id]['weight'] +=1
 
 	# the selection default behaviour is quite straightforward: select items that
 	# uses any term coming from the seed set
@@ -55,16 +58,16 @@ class GraphBuilder:
 		selector = selector_functor if selector_functor else cls._selector_strategy
 		# graph instancing
 		g = _nx.DiGraph()
-		# data stream processing		
+		# data stream processing
 		for item in data:
 			if selector(g, item, seed_set):
-				builder(g, item)
+				builder(g, item, seed_set)
 		# return the graph
 		return g
 
 class GraphAnalyzer:
 	@classmethod
-	def get_relevance_ranking(cls, graph, relevance_measure=_nx.pagerank_scipy):		
+	def get_relevance_ranking(cls, graph, relevance_measure=lambda g: _nx.pagerank_scipy(g, tol=1.0e-12, max_iter=200, weight='weight')):
 		if graph:
 			# get the relevance values
 			relevance = relevance_measure(graph)
