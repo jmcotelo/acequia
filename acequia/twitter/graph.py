@@ -16,7 +16,7 @@ class GraphBuilder:
 
 		# generate the valid terms for graph constructions
 		graph_terms = item.term_set & seed_set
-		if item.hashtags: graph_terms.union(item.hashtags)
+		if item.hashtags: graph_terms.update(item.hashtags)
 		
 		# User -> Term edges
 		for term_id in graph_terms:
