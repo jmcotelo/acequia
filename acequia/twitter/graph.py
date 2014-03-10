@@ -45,10 +45,10 @@ class GraphBuilder:
 	# uses any term coming from the seed set
 	@classmethod
 	def _selector_strategy(cls, g, item, seed_set):
-		if not seed_set.isdisjoint(item.term_set):
-			return True
-		else:
+		if seed_set.isdisjoint(item.term_set):
 			return False
+		else:
+			return True
 
 
 	@classmethod
