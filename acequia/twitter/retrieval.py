@@ -53,7 +53,7 @@ class TwitterAdaptiveRetriever:
 
 			self.logger.info("performing a last analysis stage")
 			#perform an additional last analysis stage
-			self._anlysis_stage(seed_set, an_window)
+			self._anlysis_stage(seed_set, an_window)			
 
 		self.background_thread = Thread(target=thread_running, args=(self, seed_set, an_window, max_terms, period))
 		self.background_thread.start()
@@ -79,12 +79,16 @@ class TwitterAdaptiveRetriever:
 		self.fetcher.start(term_set, users)		
 	
 	def _anlysis_stage(self, seed_set, an_window):
+		self.logger.info("starting analysis stage")
+		self.logger.info("analysis stage: parsing data")
 		# parse data from the last n status files in the an_window
-		parsed_data_gen = StatusDataParser.load_n(self.statuses_dir, n=an_window)
+		parsed_data_gen = list(StatusDataParser.load_n(self.statuses_dir, n=an_window))
 		
+		self.logger.info("analysis stage: building graph")
 		# build a graph with the parsed data
 		graph = GraphBuilder.build_graph(parsed_data_gen, seed_set)
 		
+		self.logger.info("analysis stage: analyzing graph")
 		# analyze the graph
 		ranking = GraphAnalyzer.get_relevance_ranking(graph)
 		
@@ -94,8 +98,11 @@ class TwitterAdaptiveRetriever:
 		t_now = datetime.datetime.now()		
 		timestamp = t_now.strftime("%Y-%m-%d_%H-%M-%S")
 		fpath = "{}/graph{}.gexf".format(self.graphs_dir, timestamp)
+
+		self.logger.info("analysis stage: dumping graph")
 		GraphDumper.dump_graph(graph,fpath)
-		
+
+		self.logger.info("analysis stage finished")		
 		return ranking
 
 	def _get_next_termset(self, seed_set, ranking, max_terms):

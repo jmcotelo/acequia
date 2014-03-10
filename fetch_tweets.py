@@ -16,7 +16,7 @@ from acequia.twitter import TwitterAdaptiveRetriever
 def configure_logging(logfname):
     # log to file including debug
     logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s;%(processName)s;%(name)s;%(levelname)s;%(message)s',
+                    format='%(asctime)s;%(processName)s;%(threadName)s;%(name)s;%(levelname)s;%(message)s',
                     #datefmt='%m-%d %H:%M',
                     filename=logfname,
                     filemode='w')    
@@ -24,7 +24,7 @@ def configure_logging(logfname):
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     # set a format which is simpler for console use
-    formatter = logging.Formatter('%(asctime)s [%(processName)s|%(name)s] %(levelname)s: %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(processName)s-%(threadName)s|%(name)s] %(levelname)s: %(message)s')
     # tell the handler to use this format
     console.setFormatter(formatter)
     # add the handler to the root logger
@@ -91,7 +91,8 @@ def configure_argparse():
                         default='output_data')
     
     parser.add_argument('-l','--lang', 
-                        help='lang of the captured tweets (default=es)')
+                        help='lang of the captured tweets (default=es)',
+                        default='es')
                         
     parser.add_argument('terms', 
                         help='seed terms to be tracked',

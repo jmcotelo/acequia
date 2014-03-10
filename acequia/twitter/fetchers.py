@@ -82,6 +82,7 @@ class TwitterStreamingFetcher():
 			self.writer_proc.join()
 			self.stream_proc.join()			
 			self.running = False
+			self.logger.info("Fetching process stopped")
 			
 
 
